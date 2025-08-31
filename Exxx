@@ -38,7 +38,7 @@ public class JwtService {
         System.out.println("Token being parsed: [" + token + "]");
         // Check if token resembles a hex string (e.g., secret key)
         if (token.matches("^[0-9A-Fa-f]+$")) {
-            System.err.println("Error: Token appears to be a hexadecimal string, not a JWT");
+            System.err.println("Error: Token appears to be a hexadecimal string, not a JWT. Possible misconfiguration: Check if secret key is being used as token.");
             throw new IllegalArgumentException("Token is not a valid JWT (hex string detected): " + token);
         }
         // Validate JWT structure
@@ -119,6 +119,18 @@ public class JwtService {
         return extractClaim(token, Claims::getExpiration);
     }
 
+    // Process token from HTTP Authorization header
+    public String processToken(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            System.out.println("Received Token from Authorization header: [" + token + "]");
+            return token;
+        } else {
+            System.out.println("Invalid Authorization header: [" + authHeader + "]");
+            throw new IllegalArgumentException("Invalid Authorization header: " + authHeader);
+        }
+    }
+
     // Test method for debugging
     public static void main(String[] args) {
         JwtService jwtService = new JwtService();
@@ -130,6 +142,14 @@ public class JwtService {
         String failingToken = "BF7FD11ACE545";
         try {
             System.out.println("Failing Token Username: " + jwtService.extractUsername(failingToken));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        // Test Authorization header
+        String authHeader = "Bearer BF7FD11ACE545";
+        try {
+            String extractedToken = jwtService.processToken(authHeader);
+            System.out.println("Extracted Token Username: " + jwtService.extractUsername(extractedToken));
         } catch (Exception e) {
             e.printStackTrace();
         }
