@@ -1,0 +1,140 @@
+package com.movieflix.auth.services;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+
+@Service
+public class JwtService {
+
+    // Generate a secure 32-byte key and encode it as Base64
+    private static final String SECRET_KEY = generateSecretKey();
+
+    // Generate a secure 32-byte key
+    private static String generateSecretKey() {
+        SecretKey key = Keys.secretKeyFor(SignatureAlgorithm.HS256); // Generates a 32-byte key
+        String base64Key = Base64.getEncoder().encodeToString(key.getEncoded());
+        System.out.println("Generated Secret Key (Base64): " + base64Key); // Log for debugging
+        return base64Key;
+    }
+
+    // Extract username from JWT
+    public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    // Extract all claims from JWT with validation and logging
+    private Claims extractAllClaims(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            throw new IllegalArgumentException("JWT token cannot be null or empty");
+        }
+        System.out.println("Token being parsed: [" + token + "]");
+        // Validate JWT structure
+        String[] parts = token.split("\\.");
+        System.out.println("Token parts count: " + parts.length);
+        if (parts.length != 3) {
+            throw new IllegalArgumentException("Invalid JWT format: Expected 3 parts, found " + parts.length);
+        }
+        // Validate Base64 encoding
+        for (int i = 0; i < 3; i++) {
+            try {
+                Base64.getUrlDecoder().decode(parts[i]);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid Base64 in JWT part " + i + ": " + parts[i]);
+            }
+        }
+        try {
+            return Jwts
+                    .parserBuilder()
+                    .setSigningKey(getSignInKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (io.jsonwebtoken.MalformedJwtException e) {
+            System.err.println("Malformed JWT: " + e.getMessage());
+            throw e;
+        } catch (io.jsonwebtoken.SignatureException e) {
+            System.err.println("Invalid JWT signature: " + e.getMessage());
+            throw e;
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            System.err.println("JWT token is expired: " + e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            System.err.println("Error parsing JWT: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    // Get signing key from SECRET_KEY
+    private Key getSignInKey() {
+        byte[] keyBytes = Base64.getDecoder().decode(SECRET_KEY);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public String generateToken(UserDetails userDetails) {
+        return generateToken(new HashMap<>(), userDetails);
+    }
+
+    // Generate token using JWT utility class and return token as String
+    public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        extraClaims = new HashMap<>(extraClaims);
+        extraClaims.put("role", userDetails.getAuthorities());
+        String token = Jwts
+                .builder()
+                .setClaims(extraClaims)
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 25 * 100000)) // 2,500,000 ms ≈ 41.67 minutes
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
+        System.out.println("Generated JWT: [" + token + "]");
+        return token;
+    }
+
+    // Validate token by checking username and expiration
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+
+    // Check if token is expired
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    // Get expiration date from token
+    private Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    // Test method for debugging
+    public static void main(String[] args) {
+        JwtService jwtService = new JwtService();
+        UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+            "testuser", "password", new ArrayList<>());
+        String token = jwtService.generateToken(userDetails);
+        System.out.println("Extracted Username: " + jwtService.extractUsername(token));
+        // Test an external token
+        String externalToken = "BF7FD11ACE545"; // Replace with the failing token
+        try {
+            System.out.println("External Token Username: " + jwtService.extractUsername(externalToken));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
