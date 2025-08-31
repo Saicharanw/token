@@ -1,0 +1,188 @@
+package com.movieflix.auth.services;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+
+@Service
+public class JwtService {
+
+    // Original hex key (29 bytes, 232 bits)
+    private static final String HEX_KEY = "BF7FD11ACE545745B7BA1AF98B6F156D127BC7BB544BAB6A4FD74E4FC7";
+    // Pad to 32 bytes and encode as Base64
+    private static final String SECRET_KEY = generateSecretKey();
+
+    // Convert hex key to 32-byte Base64 key
+    private static String generateSecretKey() {
+        // Convert hex to bytes (29 bytes)
+        byte[] keyBytes = hexToBytes(HEX_KEY);
+        // Pad to 32 bytes
+        byte[] paddedKey = new byte[32];
+        System.arraycopy(keyBytes, 0, paddedKey, 0, keyBytes.length);
+        // Fill remaining bytes with zeros (3 bytes)
+        for (int i = keyBytes.length; i < 32; i++) {
+            paddedKey[i] = 0;
+        }
+        String base64Key = Base64.getEncoder().encodeToString(paddedKey);
+        System.out.println("Generated Secret Key (Base64): " + base64Key);
+        return base64Key;
+    }
+
+    // Convert hex string to byte array
+    private static byte[] hexToBytes(String hexString) {
+        int len = hexString.length();
+        if (len % 2 != 0) {
+            throw new IllegalArgumentException("Invalid hex string length: " + len);
+        }
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(hexString.charAt(i), 16) << 4)
+                                 + Character.digit(hexString.charAt(i + 1), 16));
+        }
+        return data;
+    }
+
+    // Extract username from JWT
+    public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    // Extract all claims from JWT with validation and logging
+    private Claims extractAllClaims(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            throw new IllegalArgumentException("JWT token cannot be null or empty");
+        }
+        System.out.println("Token being parsed: [" + token + "]");
+        // Check if token resembles the hex key
+        if (token.contains(HEX_KEY.substring(0, 12)) || token.matches("^[0-9A-Fa-f]+$")) {
+            System.err.println("Error: Token appears to be a hexadecimal string or secret key, not a JWT. Check client or configuration.");
+            throw new IllegalArgumentException("Token is not a valid JWT (hex string detected): " + token);
+        }
+        // Validate JWT structure
+        String[] parts = token.split("\\.");
+        System.out.println("Token parts count: " + parts.length);
+        if (parts.length != 3) {
+            throw new IllegalArgumentException("Invalid JWT format: Expected 3 parts, found " + parts.length);
+        }
+        // Validate Base64 encoding
+        for (int i = 0; i < 3; i++) {
+            try {
+                Base64.getUrlDecoder().decode(parts[i]);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid Base64 in JWT part " + i + ": " + parts[i]);
+            }
+        }
+        try {
+            return Jwts
+                    .parserBuilder()
+                    .setSigningKey(getSignInKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (io.jsonwebtoken.MalformedJwtException e) {
+            System.err.println("Malformed JWT: " + e.getMessage());
+            throw e;
+        } catch (io.jsonwebtoken.SignatureException e) {
+            System.err.println("Invalid JWT signature: " + e.getMessage());
+            throw e;
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            System.err.println("JWT token is expired: " + e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            System.err.println("Error parsing JWT: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    // Get signing key from SECRET_KEY
+    private Key getSignInKey() {
+        byte[] keyBytes = Base64.getDecoder().decode(SECRET_KEY);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public String generateToken(UserDetails userDetails) {
+        return generateToken(new HashMap<>(), userDetails);
+    }
+
+    // Generate token using JWT utility class and return token as String
+    public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        extraClaims = new HashMap<>(extraClaims);
+        extraClaims.put("role", userDetails.getAuthorities());
+        String token = Jwts
+                .builder()
+                .setClaims(extraClaims)
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 25 * 100000)) // 2,500,000 ms ≈ 41.67 minutes
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
+        System.out.println("Generated JWT: [" + token + "]");
+        return token;
+    }
+
+    // Validate token by checking username and expiration
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+
+    // Check if token is expired
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    // Get expiration date from token
+    private Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    // Process token from HTTP Authorization header
+    public String processToken(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            System.out.println("Received Token from Authorization header: [" + token + "]");
+            return token;
+        } else {
+            System.out.println("Invalid Authorization header: [" + authHeader + "]");
+            throw new IllegalArgumentException("Invalid Authorization header: " + authHeader);
+        }
+    }
+
+    // Test method for debugging
+    public static void main(String[] args) {
+        JwtService jwtService = new JwtService();
+        UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+            "testuser", "password", new ArrayList<>());
+        String token = jwtService.generateToken(userDetails);
+        System.out.println("Extracted Username: " + jwtService.extractUsername(token));
+        // Test the failing token
+        String failingToken = "BF7FD11ACE545745B7BA1AF98B6F156D127BC7BB544BAB6A4FD74E4FC7";
+        try {
+            System.out.println("Failing Token Username: " + jwtService.extractUsername(failingToken));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        // Test Authorization header
+        String authHeader = "Bearer " + failingToken;
+        try {
+            String extractedToken = jwtService.processToken(authHeader);
+            System.out.println("Extracted Token Username: " + jwtService.extractUsername(extractedToken));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
