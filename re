@@ -18,6 +18,7 @@ public class JwtService {
 
     // Original hex key (29 bytes, 232 bits)
     private static final String HEX_KEY = "BF7FD11ACE545745B7BA1AF98B6F156D127BC7BB544BAB6A4FD74E4FC7";
+//404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
     // Pad to 32 bytes and encode as Base64
     private static final String SECRET_KEY = generateSecretKey();
 
