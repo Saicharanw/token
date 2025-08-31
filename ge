@@ -1,0 +1,19 @@
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Encoders;
+import io.jsonwebtoken.security.Keys;
+
+import java.security.Key;
+
+public class GenerateJwtKey {
+    public static void main(String[] args) {
+        // Generate a secure random key for HS256
+        Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+
+        // Encode as Base64 so you can paste it into application.properties or your service
+        String base64Key = Encoders.BASE64.encode(key.getEncoded());
+
+        System.out.println("Your new secure Base64 key:");
+        System.out.println(base64Key);
+        System.out.println("Key length (bytes): " + key.getEncoded().length);
+    }
+}
