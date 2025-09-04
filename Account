@@ -1,0 +1,272 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { signup } from "../api/auth";
+import {
+  Box,
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  Typography,
+  createTheme,
+  ThemeProvider,
+} from "@mui/material";
+
+const SC_PRIMARY_COLOR = "#00793f";
+const SC_SECONDARY_COLOR = "#0c965a";
+
+const theme = createTheme({
+  palette: {
+    primary: { main: SC_PRIMARY_COLOR },
+    secondary: { main: SC_SECONDARY_COLOR },
+    background: { default: "#e6f0fa" },
+  },
+});
+
+function AccountCreation() {
+  const [formData, setFormData] = useState({
+    FullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    agreeTerms: false,
+  });
+  const [errors, setErrors] = useState({
+    FullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    agreeTerms: "",
+    server: "",
+  });
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    const { name, value, checked, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+    setErrors((prev) => ({ ...prev, [name]: "", server: "" }));
+  };
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { ...errors, server: "" };
+
+    if (!formData.FullName.trim()) {
+      newErrors.FullName = "Full name is required";
+      isValid = false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+      isValid = false;
+    }
+    if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
+      isValid = false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+      isValid = false;
+    }
+    if (!formData.agreeTerms) {
+      newErrors.agreeTerms = "You must agree to the Terms and Conditions";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      try {
+        const username = formData.email.split("@")[0];
+        const payload = {
+          name: formData.FullName, // Map FullName to name for backend
+          email: formData.email,
+          username,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          agreeTerms: formData.agreeTerms,
+        };
+
+        await signup(payload);
+        alert("Account created successfully!");
+        navigate("/login");
+      } catch (error) {
+        setErrors((prev) => ({
+          ...prev,
+          server: error.message || "Registration failed. Please try again.",
+        }));
+      }
+    }
+  };
+
+  return (
+    <ThemeProvider theme={theme}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          bgcolor: "background.default",
+          p: 2,
+        }}
+      >
+        <Card
+          sx={{
+            width: { xs: 320, sm: 400 },
+            borderRadius: "12px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+            overflow: "hidden",
+          }}
+        >
+          <Box sx={{ textAlign: "center", mt: 3 }}>
+            <img
+              src="/sc.png"
+              alt="Standard Chartered Logo"
+              style={{ maxWidth: "100px", marginBottom: "8px" }}
+            />
+            <Typography variant="h6" component="h2">
+              Standard Chartered
+            </Typography>
+            <Typography variant="subtitle1">Create Your Account</Typography>
+          </Box>
+
+          <CardContent sx={{ p: 3 }}>
+            <Typography
+              variant="body2"
+              sx={{ color: "#555", mb: 3, textAlign: "center" }}
+            >
+              Join Standard Chartered
+              <br />
+              Create your account to get started with Credit Card Origination
+            </Typography>
+
+            <Box component="form" onSubmit={handleSubmit} noValidate>
+              <TextField
+                label="Full Name"
+                name="FullName"
+                value={formData.FullName}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!errors.FullName}
+                helperText={errors.FullName}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+              />
+
+              <TextField
+                label="Email Address *"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!errors.email}
+                helperText={errors.email}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+              />
+
+              <TextField
+                label="Password *"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!errors.password}
+                helperText={errors.password}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+              />
+
+              <TextField
+                label="Confirm Password *"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!errors.confirmPassword}
+                helperText={errors.confirmPassword}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    name="agreeTerms"
+                    checked={formData.agreeTerms}
+                    onChange={handleChange}
+                    sx={{ "& .MuiSvgIcon-root": { fontSize: 20 } }}
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ color: "#555" }}>
+                    I agree to the Terms and Conditions and Privacy Policy *
+                  </Typography>
+                }
+                sx={{ mb: 2 }}
+              />
+              {errors.agreeTerms && (
+                <Typography variant="caption" color="error" sx={{ mb: 2 }}>
+                  {errors.agreeTerms}
+                </Typography>
+              )}
+              {errors.server && (
+                <Typography variant="caption" color="error" sx={{ mb: 2 }}>
+                  {errors.server}
+                </Typography>
+              )}
+
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                sx={{
+                  bgcolor: "#6b7280",
+                  color: "#fff",
+                  borderRadius: "25px",
+                  padding: "10px",
+                  textTransform: "none",
+                  "&:hover": { bgcolor: "#4b5563" },
+                  "&.Mui-disabled": { bgcolor: "#d1d5db" },
+                }}
+              >
+                Create Account
+              </Button>
+
+              <Typography
+                variant="body2"
+                sx={{ color: "#555", mt: 2, textAlign: "center" }}
+              >
+                Already have an account?{" "}
+                <a
+                  href="/login"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate("/login");
+                  }}
+                  style={{ color: "#2563eb" }}
+                >
+                  Sign in
+                </a>
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+    </ThemeProvider>
+  );
+}
+
+export default AccountCreation;
