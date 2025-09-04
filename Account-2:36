@@ -1,108 +1,428 @@
+// // src/components/AccountCreation.jsx
+// import React, { useState } from 'react';
+// import axios from 'axios';
+// import {
+//   Box,
+//   Card,
+//   CardContent,
+//   TextField,
+//   Button,
+//   Checkbox,
+//   FormControlLabel,
+//   Typography,
+//   createTheme,
+//   ThemeProvider,
+// } from '@mui/material';
+
+// const SC_PRIMARY_COLOR = '#00793f';
+// const SC_SECONDARY_COLOR = '#0c965a';
+
+// // Create MUI theme with custom colors
+// const theme = createTheme({
+//   palette: {
+//     primary: {
+//       main: SC_PRIMARY_COLOR,
+//     },
+//     secondary: {
+//       main: SC_SECONDARY_COLOR,
+//     },
+//     background: {
+//       default: '#e6f0fa',
+//     },
+//   },
+// });
+
+// function AccountCreation() {
+//   const [formData, setFormData] = useState({
+   
+//     FullName : '',
+//     email: '',
+//     password: '',
+//     confirmPassword: '',
+//     agreeTerms: false,
+//   });
+//   const [errors, setErrors] = useState({
+//     FullName: '',
+//     email: '',
+//     password: '',
+//     confirmPassword: '',
+//     agreeTerms: '',
+//   });
+
+//   const handleChange = (e) => {
+//     const { name, value, checked, type } = e.target;
+//     setFormData((prev) => ({
+//       ...prev,
+//       [name]: type === 'checkbox' ? checked : value,
+//     }));
+//     setErrors((prev) => ({ ...prev, [name]: '' }));
+//   };
+
+  
+//   const validateForm = () => {
+//     let isValid = true;
+//     const newErrors = { ...errors };
+
+//     if (!formData.FullName.trim()) {
+//       newErrors.FullName = ' FullName is required';
+//       isValid = false;
+//     }
+//     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+//       newErrors.email = 'Please enter a valid email address';
+//       isValid = false;
+//     }
+//     if (formData.password.length < 8) {
+//       newErrors.password = 'Password must be at least 8 characters';
+//       isValid = false;
+//     }
+//     if (formData.password !== formData.confirmPassword) {
+//       newErrors.confirmPassword = 'Passwords do not match';
+//       isValid = false;
+//     }
+//     if (!formData.agreeTerms) {
+//       newErrors.agreeTerms = 'You must agree to the Terms and Conditions';
+//       isValid = false;
+//     }
+
+//     setErrors(newErrors);
+//     return isValid;
+//   };
+
+//   const handleSubmit = async (e) => {
+//   e.preventDefault();
+//   if (validateForm()) {
+//     try {
+//       // Generate username automatically from email
+//       const username = formData.email.split('@')[0];
+
+//       const payload = {
+//         FullName: formData.FullName,
+//         email: formData.email,
+//         username: username,
+//         password: formData.password,
+//         confirmPassword: formData.confirmPassword,
+//         agreeTerms: formData.agreeTerms,
+//       };
+
+//       const response = await axios.post(
+//         "http://localhost:8080/api/v1/auth/register",
+//         payload
+//       );
+
+//       console.log("Response from backend:", response.data);
+//       alert("Account created successfully!");
+//       // Optionally: redirect user to login page
+//     } catch (error) {
+//       console.error("Registration failed:", error.response?.data || error);
+//       alert("Registration failed. Check console for details.");
+//     }
+//   }
+// };
+
+
+//   return (
+//     <ThemeProvider theme={theme}>
+//       <Box
+//         sx={{
+//           display: 'flex',
+//           justifyContent: 'center',
+//           alignItems: 'center',
+//           minHeight: '100vh',
+//           bgcolor: 'background.default',
+//           p: 2,
+          
+//         }}
+//       >
+//         <Card
+//           sx={{
+//             width: { xs: 320, sm: 400 },
+//             borderRadius: '12px',
+//             boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+//             overflow: 'hidden',
+//           }}
+//         >
+//           {/* Logo & Header */}
+//           <Box sx={{ textAlign: 'center', mt: 3 }}>
+//             <img
+//               src="/sc.png" // Place this file in public/
+//               alt="Standard Chartered Logo"
+//               style={{ maxWidth: '100px', marginBottom: '8px' }}
+//             />
+//             <Typography variant="h6" component="h2">
+//               Standard Chartered
+//             </Typography>
+//             <Typography variant="subtitle1">Create Your Account</Typography>
+//           </Box>
+
+//           <CardContent sx={{ p: 3 }}>
+//             <Typography
+//               variant="body2"
+//               sx={{ color: '#555', mb: 3, textAlign: 'center' }}
+//             >
+//               Join Standard Chartered
+//               <br />
+//               Create your account to get started with Credit Card Origination
+//             </Typography>
+
+//             <Box component="form" onSubmit={handleSubmit} noValidate>
+//               <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              
+//                 <TextField
+//                   label="Full Name"
+//                   name="FullName"
+//                   value={formData.FullName}
+//                   onChange={handleChange}
+//                   fullWidth
+//                   error={!!errors.FullName}
+//                   helperText={errors.FullName}
+//                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+//                 />
+//               </Box>
+
+//               <TextField
+//                 label="Email Address *"
+//                 name="email"
+//                 type="email"
+//                 value={formData.email}
+//                 onChange={handleChange}
+//                 fullWidth
+//                 margin="normal"
+//                 error={!!errors.email}
+//                 helperText={errors.email}
+//                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+//               />
+
+//               <TextField
+//                 label="Password *"
+//                 name="password"
+//                 type="password"
+//                 value={formData.password}
+//                 onChange={handleChange}
+//                 fullWidth
+//                 margin="normal"
+//                 error={!!errors.password}
+//                 helperText={errors.password}
+//                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+//               />
+
+//               <TextField
+//                 label="Confirm Password *"
+//                 name="confirmPassword"
+//                 type="password"
+//                 value={formData.confirmPassword}
+//                 onChange={handleChange}
+//                 fullWidth
+//                 margin="normal"
+//                 error={!!errors.confirmPassword}
+//                 helperText={errors.confirmPassword}
+//                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+//               />
+
+//               <FormControlLabel
+//                 control={
+//                   <Checkbox
+//                     name="agreeTerms"
+//                     checked={formData.agreeTerms}
+//                     onChange={handleChange}
+//                     sx={{ '& .MuiSvgIcon-root': { fontSize: 20 } }}
+//                   />
+//                 }
+//                 label={
+//                   <Typography variant="body2" sx={{ color: '#555' }}>
+//                     I agree to the Terms and Conditions and Privacy Policy *
+//                   </Typography>
+//                 }
+//                 sx={{ mb: 2 }}
+//               />
+//               {errors.agreeTerms && (
+//                 <Typography
+//                   variant="caption"
+//                   color="error"
+//                   sx={{ mb: 2 }}
+//                 >
+//                   {errors.agreeTerms}
+//                 </Typography>
+//               )}
+
+//               <Button
+//                 type="submit"
+//                 variant="contained"
+//                 fullWidth
+//                 sx={{
+//                   bgcolor: '#6b7280',
+//                   color: '#fff',
+//                   borderRadius: '25px',
+//                   padding: '10px',
+//                   textTransform: 'none',
+//                   '&:hover': { bgcolor: '#4b5563' },
+//                   '&.Mui-disabled': { bgcolor: '#d1d5db' },
+//                 }}
+//               >
+//                 Create Account
+//               </Button>
+
+//               <Typography
+//                 variant="body2"
+//                 sx={{ color: '#555', mt: 2, textAlign: 'center' }}
+//               >
+//                 Already have an account?{' '}
+//                 <a href="/
+//                 " style={{ color: '#2563eb' }}>
+//                   Sign in
+//                 </a>
+//               </Typography>
+
+              
+//             </Box>
+//           </CardContent>
+//         </Card>
+//       </Box>
+//     </ThemeProvider>
+//   );
+// }
+
+// export default AccountCreation;
 import React, { useState } from "react";
 import {
+  Box,
+  Card,
+  CardContent,
   TextField,
   Button,
-  Typography,
-  Box,
   Checkbox,
   FormControlLabel,
+  Typography,
   CircularProgress,
+  createTheme,
+  ThemeProvider,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
+const SC_PRIMARY_COLOR = "#00793f";
+const SC_SECONDARY_COLOR = "#0c965a";
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: SC_PRIMARY_COLOR,
+    },
+    secondary: {
+      main: SC_SECONDARY_COLOR,
+    },
+    background: {
+      default: "#e6f0fa",
+    },
+  },
+});
+
 function AccountCreation() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    fullName: "",
-    username: "",
+    FullName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    agreement: false,
+    agreeTerms: false,
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({
+    FullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    agreeTerms: "",
+  });
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Handle input change
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target;
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: type === "checkbox" ? checked : value,
-    });
-
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: "" });
-    }
+    }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  // Validation
-  const validate = () => {
-    let temp = {};
-    if (!formData.fullName) temp.fullName = "Full Name is required";
-    if (!formData.username) temp.username = "Username is required";
-    if (!formData.email) temp.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) temp.email = "Email is invalid";
-    if (!formData.password || formData.password.length < 6)
-      temp.password = "Password must be at least 6 characters";
-    else if (
-      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/.test(
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { ...errors };
+
+    if (!formData.FullName.trim()) {
+      newErrors.FullName = "Full Name is required";
+      isValid = false;
+    }
+    if (!formData.email) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+      isValid = false;
+    }
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    } else if (
+      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
         formData.password
       )
-    )
-      temp.password =
-        "Password must include uppercase, lowercase, number, and special character";
-    if (formData.password !== formData.confirmPassword)
-      temp.confirmPassword = "Passwords do not match";
-    if (!formData.agreement)
-      temp.agreement = "You must accept the terms & conditions";
+    ) {
+      newErrors.password =
+        "Password must be at least 8 characters, including uppercase, lowercase, number, and special character";
+      isValid = false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+      isValid = false;
+    }
+    if (!formData.agreeTerms) {
+      newErrors.agreeTerms = "You must agree to the Terms and Conditions";
+      isValid = false;
+    }
 
-    setErrors(temp);
-    return Object.keys(temp).length === 0;
+    setErrors(newErrors);
+    return isValid;
   };
 
-  // Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-    if (!validate()) return;
+    if (!validateForm()) return;
     setIsLoading(true);
 
     try {
+      const username = formData.email.split("@")[0]; // Generate username from email
       const payload = {
-        name: formData.fullName,
-        username: formData.username,
+        name: formData.FullName,
+        username,
         email: formData.email,
         password: formData.password,
       };
 
-      const response = await api.post("/auth/signup", payload);
+      const response = await api.post("/auth/register", payload);
       const { accessToken, refreshToken, name, email } = response.data;
 
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
-      localStorage.setItem("name", name);
-      localStorage.setItem("email", email);
+      localStorage.setItem("name", name || "");
+      localStorage.setItem("email", email || "");
 
       setMessage("✅ Account created successfully!");
       setFormData({
-        fullName: "",
-        username: "",
+        FullName: "",
         email: "",
         password: "",
         confirmPassword: "",
-        agreement: false,
+        agreeTerms: false,
       });
       setErrors({});
       navigate("/dashboard");
-    } catch (err) {
-      let errorMessage = "❌ Failed to create account";
+    } catch (error) {
+      let errorMessage = "❌ Registration failed";
       try {
-        errorMessage = err.response?.data?.message || err.message;
+        errorMessage = error.response?.data?.message || error.message;
       } catch {
-        errorMessage = err.message || errorMessage;
+        errorMessage = error.message || errorMessage;
       }
       setMessage(errorMessage);
     } finally {
@@ -111,113 +431,166 @@ function AccountCreation() {
   };
 
   return (
-    <Box sx={{ maxWidth: 400, mx: "auto", mt: 5 }}>
-      <Typography variant="h5" gutterBottom>
-        Create Account
-      </Typography>
-
-      <form onSubmit={handleSubmit}>
-        <TextField
-          fullWidth
-          label="Full Name"
-          name="fullName"
-          value={formData.fullName}
-          onChange={handleChange}
-          error={!!errors.fullName}
-          helperText={errors.fullName}
-          margin="normal"
-          disabled={isLoading}
-        />
-
-        <TextField
-          fullWidth
-          label="Username"
-          name="username"
-          value={formData.username}
-          onChange={handleChange}
-          error={!!errors.username}
-          helperText={errors.username}
-          margin="normal"
-          disabled={isLoading}
-        />
-
-        <TextField
-          fullWidth
-          label="Email"
-          name="email"
-          type="email"
-          value={formData.email}
-          onChange={handleChange}
-          error={!!errors.email}
-          helperText={errors.email}
-          margin="normal"
-          disabled={isLoading}
-        />
-
-        <TextField
-          fullWidth
-          label="Password"
-          name="password"
-          type="password"
-          value={formData.password}
-          onChange={handleChange}
-          error={!!errors.password}
-          helperText={errors.password}
-          margin="normal"
-          disabled={isLoading}
-        />
-
-        <TextField
-          fullWidth
-          label="Confirm Password"
-          name="confirmPassword"
-          type="password"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          error={!!errors.confirmPassword}
-          helperText={errors.confirmPassword}
-          margin="normal"
-          disabled={isLoading}
-        />
-
-        <FormControlLabel
-          control={
-            <Checkbox
-              name="agreement"
-              checked={formData.agreement}
-              onChange={handleChange}
-              color="primary"
-              disabled={isLoading}
+    <ThemeProvider theme={theme}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          bgcolor: "background.default",
+          p: 2,
+        }}
+      >
+        <Card
+          sx={{
+            width: { xs: 320, sm: 400 },
+            borderRadius: "12px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+            overflow: "hidden",
+          }}
+        >
+          <Box sx={{ textAlign: "center", mt: 3 }}>
+            <img
+              src="/sc.png"
+              alt="Standard Chartered Logo"
+              style={{ maxWidth: "100px", marginBottom: "8px" }}
             />
-          }
-          label="I agree to the Terms & Conditions"
-        />
-        {errors.agreement && (
-          <Typography color="error" variant="body2">
-            {errors.agreement}
-          </Typography>
-        )}
+            <Typography variant="h6" component="h2">
+              Standard Chartered
+            </Typography>
+            <Typography variant="subtitle1">Create Your Account</Typography>
+          </Box>
 
-        <Button
-          type="submit"
-          variant="contained"
-          fullWidth
-          sx={{ mt: 2 }}
-          disabled={isLoading}
-        >
-          {isLoading ? <CircularProgress size={24} /> : "Submit"}
-        </Button>
-      </form>
+          <CardContent sx={{ p: 3 }}>
+            <Typography
+              variant="body2"
+              sx={{ color: "#555", mb: 3, textAlign: "center" }}
+            >
+              Join Standard Chartered
+              <br />
+              Create your account to get started with Credit Card Origination
+            </Typography>
 
-      {message && (
-        <Typography
-          sx={{ mt: 2 }}
-          color={message.startsWith("✅") ? "green" : "red"}
-        >
-          {message}
-        </Typography>
-      )}
-    </Box>
+            <Box component="form" onSubmit={handleSubmit} noValidate>
+              <TextField
+                label="Full Name"
+                name="FullName"
+                value={formData.FullName}
+                onChange={handleChange}
+                fullWidth
+                error={!!errors.FullName}
+                helperText={errors.FullName}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" }, mb: 2 }}
+                disabled={isLoading}
+              />
+
+              <TextField
+                label="Email Address *"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!errors.email}
+                helperText={errors.email}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                disabled={isLoading}
+              />
+
+              <TextField
+                label="Password *"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!errors.password}
+                helperText={errors.password}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                disabled={isLoading}
+              />
+
+              <TextField
+                label="Confirm Password *"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!errors.confirmPassword}
+                helperText={errors.confirmPassword}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                disabled={isLoading}
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    name="agreeTerms"
+                    checked={formData.agreeTerms}
+                    onChange={handleChange}
+                    sx={{ "& .MuiSvgIcon-root": { fontSize: 20 } }}
+                    disabled={isLoading}
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ color: "#555" }}>
+                    I agree to the Terms and Conditions and Privacy Policy *
+                  </Typography>
+                }
+                sx={{ mb: 2 }}
+              />
+              {errors.agreeTerms && (
+                <Typography variant="caption" color="error" sx={{ mb: 2 }}>
+                  {errors.agreeTerms}
+                </Typography>
+              )}
+
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                sx={{
+                  bgcolor: "#6b7280",
+                  color: "#fff",
+                  borderRadius: "25px",
+                  padding: "10px",
+                  textTransform: "none",
+                  "&:hover": { bgcolor: "#4b5563" },
+                  "&.Mui-disabled": { bgcolor: "#d1d5db" },
+                }}
+                disabled={isLoading}
+              >
+                {isLoading ? <CircularProgress size={24} /> : "Create Account"}
+              </Button>
+
+              {message && (
+                <Typography
+                  sx={{ mt: 2, textAlign: "center" }}
+                  color={message.startsWith("✅") ? "green" : "red"}
+                >
+                  {message}
+                </Typography>
+              )}
+
+              <Typography
+                variant="body2"
+                sx={{ color: "#555", mt: 2, textAlign: "center" }}
+              >
+                Already have an account?{" "}
+                <a href="/login" style={{ color: "#2563eb" }}>
+                  Sign in
+                </a>
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+    </ThemeProvider>
   );
 }
 
