@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { TextField, Button, Typography, Box, Checkbox, FormControlLabel } from "@mui/material";
+import {
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Checkbox,
+  FormControlLabel,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
@@ -8,10 +15,11 @@ function AccountCreation() {
 
   const [formData, setFormData] = useState({
     fullName: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
-    agreement: false, // ✅ checkbox state
+    agreement: false,
   });
 
   const [errors, setErrors] = useState({});
@@ -34,6 +42,7 @@ function AccountCreation() {
   const validate = () => {
     let temp = {};
     if (!formData.fullName) temp.fullName = "Full Name is required";
+    if (!formData.username) temp.username = "Username is required";
     if (!formData.email) temp.email = "Email is required";
     if (!formData.password || formData.password.length < 6)
       temp.password = "Password must be at least 6 characters";
@@ -54,10 +63,27 @@ function AccountCreation() {
     if (!validate()) return;
 
     try {
-      await api.post("/accounts", formData);
+      // Map frontend formData to backend RequestDTO
+      const payload = {
+        name: formData.fullName,
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+      };
+
+      const response = await api.post("/auth/signup", payload);
+
+      // Handle AuthResponse
+      const { accessToken, refreshToken, name, email } = response.data;
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+      localStorage.setItem("name", name);
+      localStorage.setItem("email", email);
+
       setMessage("✅ Account created successfully!");
       setFormData({
         fullName: "",
+        username: "",
         email: "",
         password: "",
         confirmPassword: "",
@@ -85,6 +111,17 @@ function AccountCreation() {
           onChange={handleChange}
           error={!!errors.fullName}
           helperText={errors.fullName}
+          margin="normal"
+        />
+
+        <TextField
+          fullWidth
+          label="Username"
+          name="username"
+          value={formData.username}
+          onChange={handleChange}
+          error={!!errors.username}
+          helperText={errors.username}
           margin="normal"
         />
 
@@ -124,7 +161,6 @@ function AccountCreation() {
           margin="normal"
         />
 
-        {/* ✅ Agreement Checkbox */}
         <FormControlLabel
           control={
             <Checkbox
@@ -148,7 +184,10 @@ function AccountCreation() {
       </form>
 
       {message && (
-        <Typography sx={{ mt: 2 }} color={message.startsWith("✅") ? "green" : "red"}>
+        <Typography
+          sx={{ mt: 2 }}
+          color={message.startsWith("✅") ? "green" : "red"}
+        >
           {message}
         </Typography>
       )}
