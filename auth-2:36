@@ -1,22 +1,59 @@
-// store tokens in localStorage (or cookies if needed)
-export const getAccessToken = () => localStorage.getItem("accessToken");
-export const getRefreshToken = () => localStorage.getItem("refreshToken");
+import api from "./axios";
 
-export const setAccessToken = (token) => localStorage.setItem("accessToken", token);
-export const setRefreshToken = (token) => localStorage.setItem("refreshToken", token);
-
-// Call backend to refresh token
-export const refreshAccessToken = async (refreshToken) => {
-  const res = await fetch("http://localhost:8080/api/v1/auth/refresh", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-  });
-
-  if (!res.ok) {
-    throw new Error("Unable to refresh token");
+export const signup = async (userData) => {
+  if (!userData.name || !userData.username || !userData.email || !userData.password) {
+    throw new Error("Name, username, email, and password are required");
   }
 
-  const data = await res.json();
-  return data.accessToken; // 🔥 must match your backend response
+  try {
+    const response = await api.post("/auth/signup", {
+      name: userData.name,
+      username: userData.username,
+      email: userData.email,
+      password: userData.password,
+    });
+    const { accessToken, refreshToken, name, email } = response.data;
+
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+    localStorage.setItem("name", name || "");
+    localStorage.setItem("email", email || "");
+
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      JSON.stringify({
+        message: error.response?.data?.message || "Failed to create account",
+        status: error.response?.status || 500,
+      })
+    );
+  }
+};
+
+export const login = async (credentials) => {
+  if (!credentials.email || !credentials.password) {
+    throw new Error("Email and password are required");
+  }
+
+  try {
+    const response = await api.post("/auth/login", {
+      username: credentials.email, // Backend expects email as username
+      password: credentials.password,
+    });
+    const { accessToken, refreshToken, name, email } = response.data;
+
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+    localStorage.setItem("name", name || "");
+    localStorage.setItem("email", email || "");
+
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      JSON.stringify({
+        message: error.response?.data?.message || "Failed to login",
+        status: error.response?.status || 500,
+      })
+    );
+  }
 };
