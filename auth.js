@@ -2,13 +2,12 @@ import api from "./axios";
 
 // ✅ Signup function
 export const signup = async (userData) => {
-  // Input validation
-  if (!userData.email || !userData.password) {
-    throw new Error("Email and password are required");
+  if (!userData.email || !userData.password || !userData.name) {
+    throw new Error("Name, email, and password are required");
   }
 
   try {
-    const response = await api.post("/auth/signup", userData);
+    const response = await api.post("/auth/register", userData);
     const { accessToken, refreshToken, name, email } = response.data;
 
     if (accessToken && refreshToken) {
@@ -21,13 +20,12 @@ export const signup = async (userData) => {
     return response.data;
   } catch (error) {
     console.error("Signup error:", error);
-    throw error.response?.data || error.message;
+    throw error.response?.data?.message || error.message;
   }
 };
 
 // ✅ Login function
 export const login = async (credentials) => {
-  // Input validation
   if (!credentials.email || !credentials.password) {
     throw new Error("Email and password are required");
   }
@@ -46,7 +44,7 @@ export const login = async (credentials) => {
     return response.data;
   } catch (error) {
     console.error("Login error:", error);
-    throw error.response?.data || error.message;
+    throw error.response?.data?.message || error.message;
   }
 };
 
@@ -68,6 +66,6 @@ export const refreshToken = async () => {
     return accessToken;
   } catch (error) {
     console.error("Refresh token error:", error);
-    throw error.response?.data || error.message;
+    throw error.response?.data?.message || error.message;
   }
 };
