@@ -6,13 +6,13 @@ import {
   Box,
   Checkbox,
   FormControlLabel,
+  CircularProgress,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
 function AccountCreation() {
   const navigate = useNavigate();
-
   const [formData, setFormData] = useState({
     fullName: "",
     username: "",
@@ -21,9 +21,9 @@ function AccountCreation() {
     confirmPassword: "",
     agreement: false,
   });
-
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Handle input change
   const handleChange = (e) => {
@@ -44,8 +44,16 @@ function AccountCreation() {
     if (!formData.fullName) temp.fullName = "Full Name is required";
     if (!formData.username) temp.username = "Username is required";
     if (!formData.email) temp.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) temp.email = "Email is invalid";
     if (!formData.password || formData.password.length < 6)
       temp.password = "Password must be at least 6 characters";
+    else if (
+      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/.test(
+        formData.password
+      )
+    )
+      temp.password =
+        "Password must include uppercase, lowercase, number, and special character";
     if (formData.password !== formData.confirmPassword)
       temp.confirmPassword = "Passwords do not match";
     if (!formData.agreement)
@@ -59,11 +67,10 @@ function AccountCreation() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-
     if (!validate()) return;
+    setIsLoading(true);
 
     try {
-      // Map frontend formData to backend RequestDTO
       const payload = {
         name: formData.fullName,
         username: formData.username,
@@ -72,9 +79,8 @@ function AccountCreation() {
       };
 
       const response = await api.post("/auth/signup", payload);
-
-      // Handle AuthResponse
       const { accessToken, refreshToken, name, email } = response.data;
+
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
       localStorage.setItem("name", name);
@@ -92,7 +98,15 @@ function AccountCreation() {
       setErrors({});
       navigate("/dashboard");
     } catch (err) {
-      setMessage(err.response?.data?.message || "❌ Failed to create account");
+      let errorMessage = "❌ Failed to create account";
+      try {
+        errorMessage = err.response?.data?.message || err.message;
+      } catch {
+        errorMessage = err.message || errorMessage;
+      }
+      setMessage(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -112,6 +126,7 @@ function AccountCreation() {
           error={!!errors.fullName}
           helperText={errors.fullName}
           margin="normal"
+          disabled={isLoading}
         />
 
         <TextField
@@ -123,6 +138,7 @@ function AccountCreation() {
           error={!!errors.username}
           helperText={errors.username}
           margin="normal"
+          disabled={isLoading}
         />
 
         <TextField
@@ -135,6 +151,7 @@ function AccountCreation() {
           error={!!errors.email}
           helperText={errors.email}
           margin="normal"
+          disabled={isLoading}
         />
 
         <TextField
@@ -147,6 +164,7 @@ function AccountCreation() {
           error={!!errors.password}
           helperText={errors.password}
           margin="normal"
+          disabled={isLoading}
         />
 
         <TextField
@@ -159,6 +177,7 @@ function AccountCreation() {
           error={!!errors.confirmPassword}
           helperText={errors.confirmPassword}
           margin="normal"
+          disabled={isLoading}
         />
 
         <FormControlLabel
@@ -168,6 +187,7 @@ function AccountCreation() {
               checked={formData.agreement}
               onChange={handleChange}
               color="primary"
+              disabled={isLoading}
             />
           }
           label="I agree to the Terms & Conditions"
@@ -178,8 +198,14 @@ function AccountCreation() {
           </Typography>
         )}
 
-        <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
-          Submit
+        <Button
+          type="submit"
+          variant="contained"
+          fullWidth
+          sx={{ mt: 2 }}
+          disabled={isLoading}
+        >
+          {isLoading ? <CircularProgress size={24} /> : "Submit"}
         </Button>
       </form>
 
