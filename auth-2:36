@@ -1,0 +1,22 @@
+// store tokens in localStorage (or cookies if needed)
+export const getAccessToken = () => localStorage.getItem("accessToken");
+export const getRefreshToken = () => localStorage.getItem("refreshToken");
+
+export const setAccessToken = (token) => localStorage.setItem("accessToken", token);
+export const setRefreshToken = (token) => localStorage.setItem("refreshToken", token);
+
+// Call backend to refresh token
+export const refreshAccessToken = async (refreshToken) => {
+  const res = await fetch("http://localhost:8080/api/v1/auth/refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Unable to refresh token");
+  }
+
+  const data = await res.json();
+  return data.accessToken; // 🔥 must match your backend response
+};
