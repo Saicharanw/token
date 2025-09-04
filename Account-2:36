@@ -1,0 +1,159 @@
+import React, { useState } from "react";
+import { TextField, Button, Typography, Box, Checkbox, FormControlLabel } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
+
+function AccountCreation() {
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    agreement: false, // ✅ checkbox state
+  });
+
+  const [errors, setErrors] = useState({});
+  const [message, setMessage] = useState("");
+
+  // Handle input change
+  const handleChange = (e) => {
+    const { name, value, checked, type } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === "checkbox" ? checked : value,
+    });
+
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" });
+    }
+  };
+
+  // Validation
+  const validate = () => {
+    let temp = {};
+    if (!formData.fullName) temp.fullName = "Full Name is required";
+    if (!formData.email) temp.email = "Email is required";
+    if (!formData.password || formData.password.length < 6)
+      temp.password = "Password must be at least 6 characters";
+    if (formData.password !== formData.confirmPassword)
+      temp.confirmPassword = "Passwords do not match";
+    if (!formData.agreement)
+      temp.agreement = "You must accept the terms & conditions";
+
+    setErrors(temp);
+    return Object.keys(temp).length === 0;
+  };
+
+  // Submit
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("");
+
+    if (!validate()) return;
+
+    try {
+      await api.post("/accounts", formData);
+      setMessage("✅ Account created successfully!");
+      setFormData({
+        fullName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        agreement: false,
+      });
+      setErrors({});
+      navigate("/dashboard");
+    } catch (err) {
+      setMessage(err.response?.data?.message || "❌ Failed to create account");
+    }
+  };
+
+  return (
+    <Box sx={{ maxWidth: 400, mx: "auto", mt: 5 }}>
+      <Typography variant="h5" gutterBottom>
+        Create Account
+      </Typography>
+
+      <form onSubmit={handleSubmit}>
+        <TextField
+          fullWidth
+          label="Full Name"
+          name="fullName"
+          value={formData.fullName}
+          onChange={handleChange}
+          error={!!errors.fullName}
+          helperText={errors.fullName}
+          margin="normal"
+        />
+
+        <TextField
+          fullWidth
+          label="Email"
+          name="email"
+          type="email"
+          value={formData.email}
+          onChange={handleChange}
+          error={!!errors.email}
+          helperText={errors.email}
+          margin="normal"
+        />
+
+        <TextField
+          fullWidth
+          label="Password"
+          name="password"
+          type="password"
+          value={formData.password}
+          onChange={handleChange}
+          error={!!errors.password}
+          helperText={errors.password}
+          margin="normal"
+        />
+
+        <TextField
+          fullWidth
+          label="Confirm Password"
+          name="confirmPassword"
+          type="password"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          error={!!errors.confirmPassword}
+          helperText={errors.confirmPassword}
+          margin="normal"
+        />
+
+        {/* ✅ Agreement Checkbox */}
+        <FormControlLabel
+          control={
+            <Checkbox
+              name="agreement"
+              checked={formData.agreement}
+              onChange={handleChange}
+              color="primary"
+            />
+          }
+          label="I agree to the Terms & Conditions"
+        />
+        {errors.agreement && (
+          <Typography color="error" variant="body2">
+            {errors.agreement}
+          </Typography>
+        )}
+
+        <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
+          Submit
+        </Button>
+      </form>
+
+      {message && (
+        <Typography sx={{ mt: 2 }} color={message.startsWith("✅") ? "green" : "red"}>
+          {message}
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+export default AccountCreation;
