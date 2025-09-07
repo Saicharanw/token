@@ -11,20 +11,33 @@ export function getRefreshToken() {
 
 // Save tokens
 export function setTokens(accessToken, refreshToken) {
+  console.log("setTokens called with:", { accessToken, refreshToken });
   if (accessToken) localStorage.setItem("accessToken", accessToken);
   if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
 }
 
 // Refresh token API call
 export async function refreshAccessToken(refreshToken) {
-  const response = await axios.post("http://localhost:8080/api/v1/auth/refresh-token", {
-    refreshToken,
-  });
-
-  const { accessToken, refreshToken: newRefresh } = response.data;
-
-  // Save both
-  setTokens(accessToken, newRefresh);
-
-  return { accessToken, refreshToken: newRefresh };
+  try {
+    console.log("Attempting to refresh token with refreshToken:", refreshToken);
+    const response = await axios.post("http://localhost:8080/api/v1/auth/refresh", {
+      refreshToken,
+    });
+    console.log("Refresh token response:", response.data);
+    const { accessToken, refreshToken: newRefresh } = response.data;
+    console.log("Saving tokens:", { accessToken, newRefresh });
+    setTokens(accessToken, newRefresh);
+    console.log("localStorage after setTokens:", {
+      accessToken: localStorage.getItem("accessToken"),
+      refreshToken: localStorage.getItem("refreshToken"),
+    });
+    return { accessToken, refreshToken: newRefresh };
+  } catch (error) {
+    console.error("Refresh token error:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    throw error;
+  }
 }
