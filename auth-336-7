@@ -1,32 +1,30 @@
-import api from "./api";
-import { setTokens } from "./auth";
+import axios from "axios";
 
-export const signup = async (userData) => {
-  if (!userData.name || !userData.username || !userData.email || !userData.password) {
-    throw new Error("All fields are required");
-  }
+// Get tokens
+export function getAccessToken() {
+  return localStorage.getItem("accessToken");
+}
 
-  const response = await api.post("/auth/register", userData);
-  const { accessToken, refreshToken, name, email } = response.data;
+export function getRefreshToken() {
+  return localStorage.getItem("refreshToken");
+}
 
-  setTokens(accessToken, refreshToken);
-  localStorage.setItem("name", name || "");
-  localStorage.setItem("email", email || "");
+// Save tokens
+export function setTokens(accessToken, refreshToken) {
+  if (accessToken) localStorage.setItem("accessToken", accessToken);
+  if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+}
 
-  return response.data;
-};
+// Refresh token API call
+export async function refreshAccessToken(refreshToken) {
+  const response = await axios.post("http://localhost:8080/api/v1/auth/refresh-token", {
+    refreshToken,
+  });
 
-export const login = async (credentials) => {
-  if (!credentials.username || !credentials.password) {
-    throw new Error("Username and password are required");
-  }
+  const { accessToken, refreshToken: newRefresh } = response.data;
 
-  const response = await api.post("/auth/login", credentials);
-  const { accessToken, refreshToken, name, email } = response.data;
+  // Save both
+  setTokens(accessToken, newRefresh);
 
-  setTokens(accessToken, refreshToken);
-  localStorage.setItem("name", name || "");
-  localStorage.setItem("email", email || "");
-
-  return response.data;
-};
+  return { accessToken, refreshToken: newRefresh };
+}
