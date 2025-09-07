@@ -1,0 +1,241 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
+import useDebounce from "../hooks/useDebounce";
+import "./styles.css";
+
+const SC_PRIMARY_COLOR = "#00793f";
+const SC_SECONDARY_COLOR = "#0c965a";
+
+function SignIn() {
+  const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [errors, setErrors] = useState({
+    username: "",
+    password: "",
+    emailCheck: "",
+  });
+  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+
+  // Debounce username input for email check (500ms delay)
+  const debouncedUsername = useDebounce(username, 500);
+
+  // Check email existence when debouncedUsername changes
+  useEffect(() => {
+    const checkEmail = async () => {
+      if (!debouncedUsername.trim()) {
+        setErrors((prev) => ({ ...prev, emailCheck: "Username or Email is required" }));
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(debouncedUsername)) {
+        setErrors((prev) => ({ ...prev, emailCheck: "Please enter a valid email address" }));
+        return;
+      }
+
+      setIsCheckingEmail(true);
+      try {
+        const response = await api.post("/auth/check-email", { email: debouncedUsername });
+        if (!response.data.exists) {
+          setErrors((prev) => ({ ...prev, emailCheck: "Email not registered" }));
+        } else {
+          setErrors((prev) => ({ ...prev, emailCheck: "" }));
+        }
+      } catch (error) {
+        setErrors((prev) => ({
+          ...prev,
+          emailCheck: error.response?.data?.message || "Error checking email",
+        }));
+      } finally {
+        setIsCheckingEmail(false);
+      }
+    };
+
+    checkEmail();
+  }, [debouncedUsername]);
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { username: "", password: "", emailCheck: errors.emailCheck };
+
+    if (!username.trim()) {
+      newErrors.username = "Username or Email is required";
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) {
+      newErrors.username = "Please enter a valid email address";
+      isValid = false;
+    }
+    if (!password) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    }
+    if (errors.emailCheck) {
+      isValid = false; // Prevent submission if email is not registered
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("");
+    if (!validateForm()) return;
+    setIsLoading(true);
+
+    try {
+      const response = await api.post("/auth/login", {
+        username, // Backend expects email as username
+        password,
+      });
+      const { accessToken, refreshToken, name, email } = response.data;
+
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+      localStorage.setItem("name", name || "");
+      localStorage.setItem("email", email || "");
+
+      setMessage("✅ Signed in successfully!");
+      setUsername("");
+      setPassword("");
+      setRememberMe(false);
+      setErrors({ username: "", password: "", emailCheck: "" });
+      navigate("/dashboard");
+    } catch (error) {
+      let errorMessage = "❌ Sign-in failed";
+      try {
+        errorMessage = error.response?.data?.message || error.message;
+      } catch {
+        errorMessage = error.message || errorMessage;
+      }
+      setMessage(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="container">
+      <div className="signin-box" role="main" aria-label="Standard Chartered Sign In">
+        <header>
+          <img src="/sc.png" alt="Standard Chartered Logo" className="logo" />
+          <h1>Sign In to Your Account</h1>
+        </header>
+
+        <form onSubmit={handleSubmit} className="signin-form" noValidate>
+          <label htmlFor="username">Username or Email</label>
+          <div className="input-container">
+            <input
+              type="text"
+              id="username"
+              name="username"
+              placeholder="Enter your username or email"
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setErrors((prev) => ({ ...prev, username: "", emailCheck: "" }));
+              }}
+              required
+              autoComplete="username"
+              aria-required="true"
+              disabled={isLoading}
+              className={errors.username || errors.emailCheck ? "input-error" : ""}
+            />
+            {isCheckingEmail && <span className="checking-text">Checking...</span>}
+          </div>
+          {(errors.username || errors.emailCheck) && (
+            <span className="error-text" role="alert">
+              {errors.username || errors.emailCheck}
+            </span>
+          )}
+
+          <label htmlFor="password" className="password-label">
+            Password
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setErrors((prev) => ({ ...prev, password: "" }));
+            }}
+            required
+            autoComplete="current-password"
+            aria-required="true"
+            disabled={isLoading}
+            className={errors.password ? "input-error" : ""}
+          />
+          {errors.password && (
+            <span className="error-text" role="alert">
+              {errors.password}
+            </span>
+          )}
+
+          <div className="options-row">
+            <label className="remember-me">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={() => setRememberMe(!rememberMe)}
+                disabled={isLoading}
+              />
+              Remember me
+            </label>
+            <a href="/forgot-password" className="forgot-password">
+              Forgot password?
+            </a>
+          </div>
+
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={isLoading || errors.username || errors.emailCheck || errors.password}
+          >
+            {isLoading ? "Signing In..." : "Sign In"}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => navigate("/create-account")}
+            disabled={isLoading}
+          >
+            Create Account
+          </button>
+
+          {message && (
+            <div
+              className={message.startsWith("✅") ? "success-text" : "error-text"}
+              role="alert"
+            >
+              {message}
+            </div>
+          )}
+        </form>
+
+        <div className="security-notice" aria-live="polite">
+          <p>
+            <strong>Security Notice:</strong> This site uses SSL encryption to protect your information.
+          </p>
+        </div>
+
+        <footer className="help-support">
+          <a href="/help" className="help-link">
+            Help
+          </a>
+          <span> | </span>
+          <a href="/support" className="support-link">
+            Support
+          </a>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+export default SignIn;
