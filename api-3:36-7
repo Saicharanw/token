@@ -6,11 +6,11 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Add token to request
+// Add token to every request
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) {
-    config.headers["Authorization"] = Bearer ${token};
+    config.headers["Authorization"] = `Bearer ${token}`;
   }
   return config;
 });
@@ -27,12 +27,12 @@ api.interceptors.response.use(
         const { accessToken } = await refreshAccessToken(getRefreshToken());
 
         // Update headers with new token
-        api.defaults.headers.common["Authorization"] = Bearer ${accessToken};
-        originalRequest.headers["Authorization"] = Bearer ${accessToken};
+        api.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+        originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
 
-        return api(originalRequest); // retry
+        return api(originalRequest); // retry request
       } catch (err) {
-        localStorage.clear(); // logout
+        localStorage.clear(); // logout on failure
         return Promise.reject(err);
       }
     }
@@ -40,4 +40,4 @@ api.interceptors.response.use(
   }
 );
 
-export default api;
+export default api;
