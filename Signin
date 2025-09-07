@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import useDebounce from "../hooks/useDebounce";
 import "./styles.css";
 
 const SC_PRIMARY_COLOR = "#00793f";
@@ -19,48 +18,12 @@ function SignIn() {
   });
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
-  // Debounce username input for email check (500ms delay)
-  const debouncedUsername = useDebounce(username, 500);
-
-  // Check email existence when debouncedUsername changes
-  useEffect(() => {
-    const checkEmail = async () => {
-      if (!debouncedUsername.trim()) {
-        setErrors((prev) => ({ ...prev, emailCheck: "Username or Email is required" }));
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(debouncedUsername)) {
-        setErrors((prev) => ({ ...prev, emailCheck: "Please enter a valid email address" }));
-        return;
-      }
-
-      setIsCheckingEmail(true);
-      try {
-        const response = await api.post("/auth/check-email", { email: debouncedUsername });
-        if (!response.data.exists) {
-          setErrors((prev) => ({ ...prev, emailCheck: "Email not registered" }));
-        } else {
-          setErrors((prev) => ({ ...prev, emailCheck: "" }));
-        }
-      } catch (error) {
-        setErrors((prev) => ({
-          ...prev,
-          emailCheck: error.response?.data?.message || "Error checking email",
-        }));
-      } finally {
-        setIsCheckingEmail(false);
-      }
-    };
-
-    checkEmail();
-  }, [debouncedUsername]);
-
-  const validateForm = () => {
+  const validateForm = async () => {
     let isValid = true;
-    const newErrors = { username: "", password: "", emailCheck: errors.emailCheck };
+    const newErrors = { username: "", password: "", emailCheck: "" };
 
+    // Client-side validation
     if (!username.trim()) {
       newErrors.username = "Username or Email is required";
       isValid = false;
@@ -72,8 +35,19 @@ function SignIn() {
       newErrors.password = "Password is required";
       isValid = false;
     }
-    if (errors.emailCheck) {
-      isValid = false; // Prevent submission if email is not registered
+
+    // Check if email is registered
+    if (isValid) {
+      try {
+        const response = await api.post("/auth/check-email", { email: username });
+        if (!response.data.exists) {
+          newErrors.emailCheck = "Email not registered";
+          isValid = false;
+        }
+      } catch (error) {
+        newErrors.emailCheck = error.response?.data?.message || "Error checking email";
+        isValid = false;
+      }
     }
 
     setErrors(newErrors);
@@ -83,8 +57,14 @@ function SignIn() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-    if (!validateForm()) return;
     setIsLoading(true);
+
+    // Validate form and check email
+    const isValid = await validateForm();
+    if (!isValid) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await api.post("/auth/login", {
@@ -127,25 +107,22 @@ function SignIn() {
 
         <form onSubmit={handleSubmit} className="signin-form" noValidate>
           <label htmlFor="username">Username or Email</label>
-          <div className="input-container">
-            <input
-              type="text"
-              id="username"
-              name="username"
-              placeholder="Enter your username or email"
-              value={username}
-              onChange={(e) => {
-                setUsername(e.target.value);
-                setErrors((prev) => ({ ...prev, username: "", emailCheck: "" }));
-              }}
-              required
-              autoComplete="username"
-              aria-required="true"
-              disabled={isLoading}
-              className={errors.username || errors.emailCheck ? "input-error" : ""}
-            />
-            {isCheckingEmail && <span className="checking-text">Checking...</span>}
-          </div>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            placeholder="Enter your username or email"
+            value={username}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              setErrors((prev) => ({ ...prev, username: "", emailCheck: "" }));
+            }}
+            required
+            autoComplete="username"
+            aria-required="true"
+            disabled={isLoading}
+            className={errors.username || errors.emailCheck ? "input-error" : ""}
+          />
           {(errors.username || errors.emailCheck) && (
             <span className="error-text" role="alert">
               {errors.username || errors.emailCheck}
@@ -195,7 +172,7 @@ function SignIn() {
           <button
             type="submit"
             className="btn-primary"
-            disabled={isLoading || errors.username || errors.emailCheck || errors.password}
+            disabled={isLoading}
           >
             {isLoading ? "Signing In..." : "Sign In"}
           </button>
