@@ -2,34 +2,70 @@ import axios from "axios";
 
 // Get tokens
 export function getAccessToken() {
-  return localStorage.getItem("accessToken");
+  const token = localStorage.getItem("accessToken");
+  console.log("getAccessToken:", token ? token.substring(0, 20) + "..." : "null");
+  return token;
 }
 
 export function getRefreshToken() {
-  return localStorage.getItem("refreshToken");
+  const token = localStorage.getItem("refreshToken");
+  console.log("getRefreshToken:", token ? token.substring(0, 20) + "..." : "null");
+  return token;
 }
 
 // Save tokens
 export function setTokens(accessToken, refreshToken) {
-  console.log("setTokens called with:", { accessToken, refreshToken });
-  if (accessToken) localStorage.setItem("accessToken", accessToken);
-  if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+  console.log("setTokens called with:", {
+    accessToken: accessToken ? accessToken.substring(0, 20) + "..." : "null",
+    refreshToken: refreshToken ? refreshToken.substring(0, 20) + "..." : "null",
+  });
+  if (accessToken) {
+    localStorage.setItem("accessToken", accessToken);
+    console.log("Saved accessToken to localStorage:", localStorage.getItem("accessToken").substring(0, 20) + "...");
+  } else {
+    console.warn("No accessToken provided to setTokens");
+  }
+  if (refreshToken) {
+    localStorage.setItem("refreshToken", refreshToken);
+    console.log("Saved refreshToken to localStorage:", localStorage.getItem("refreshToken").substring(0, 20) + "...");
+  } else {
+    console.warn("No refreshToken provided to setTokens");
+  }
 }
 
 // Refresh token API call
 export async function refreshAccessToken(refreshToken) {
+  console.log("Attempting to refresh token with refreshToken:", refreshToken ? refreshToken.substring(0, 20) + "..." : "null");
+  if (!refreshToken) {
+    console.error("No refresh token available");
+    throw new Error("No refresh token available");
+  }
   try {
-    console.log("Attempting to refresh token with refreshToken:", refreshToken);
-    const response = await axios.post("http://localhost:8080/api/v1/auth/refresh", {
-      refreshToken,
-    });
-    console.log("Refresh token response:", response.data);
+    const response = await axios.post(
+      "http://localhost:8080/api/v1/auth/refresh",
+      { refreshToken },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+      }
+    );
+    console.log("Refresh token response status:", response.status);
+    console.log("Refresh token response data:", response.data);
     const { accessToken, refreshToken: newRefresh } = response.data;
-    console.log("Saving tokens:", { accessToken, newRefresh });
+    if (!accessToken || !newRefresh) {
+      console.error("Invalid response structure:", response.data);
+      throw new Error("Invalid response structure: missing accessToken or refreshToken");
+    }
+    console.log("Extracted tokens:", {
+      accessToken: accessToken.substring(0, 20) + "...",
+      newRefresh: newRefresh.substring(0, 20) + "...",
+    });
     setTokens(accessToken, newRefresh);
     console.log("localStorage after setTokens:", {
-      accessToken: localStorage.getItem("accessToken"),
-      refreshToken: localStorage.getItem("refreshToken"),
+      accessToken: localStorage.getItem("accessToken")?.substring(0, 20) + "...",
+      refreshToken: localStorage.getItem("refreshToken")?.substring(0, 20) + "...",
     });
     return { accessToken, refreshToken: newRefresh };
   } catch (error) {
@@ -37,6 +73,7 @@ export async function refreshAccessToken(refreshToken) {
       status: error.response?.status,
       data: error.response?.data,
       message: error.message,
+      headers: error.response?.headers,
     });
     throw error;
   }
