@@ -3,7 +3,10 @@ import { getAccessToken, getRefreshToken, refreshAccessToken, setTokens } from "
 
 const api = axios.create({
   baseURL: "http://localhost:8080/api/v1",
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+  },
 });
 
 // Add token to every request
@@ -11,32 +14,48 @@ api.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) {
     config.headers["Authorization"] = `Bearer ${token}`;
+    console.log("Added Authorization header:", config.headers["Authorization"].substring(0, 30) + "...");
+  } else {
+    console.log("No access token available for request");
   }
+  console.log("Request URL:", config.url);
   return config;
 });
 
 // Handle expired token (401)
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log("Response received for URL:", response.config.url, "Status:", response.status);
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      console.log("Interceptor: 401 error detected, attempting to refresh token");
       originalRequest._retry = true;
       try {
-        console.log("Interceptor: Attempting to refresh token");
-        const { accessToken } = await refreshAccessToken(getRefreshToken());
-        console.log("Interceptor: New access token:", accessToken);
+        const refreshToken = getRefreshToken();
+        if (!refreshToken) {
+          console.error("Interceptor: No refresh token available");
+          throw new Error("No refresh token available");
+        }
+        const { accessToken, refreshToken: newRefresh } = await refreshAccessToken(refreshToken);
+        console.log("Interceptor: New tokens received:", {
+          accessToken: accessToken.substring(0, 20) + "...",
+          refreshToken: newRefresh.substring(0, 20) + "...",
+        });
         api.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
         originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
-        return api(originalRequest); // Retry request
+        console.log("Retrying original request:", originalRequest.url);
+        return api(originalRequest);
       } catch (err) {
         console.error("Interceptor: Token refresh failed:", {
           status: err.response?.status,
           data: err.response?.data,
           message: err.message,
         });
-        // Avoid clearing localStorage during debugging
+        // Avoid clearing localStorage
         // localStorage.clear();
         return Promise.reject(err);
       }
