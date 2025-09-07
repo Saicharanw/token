@@ -2,7 +2,7 @@ import axios from "axios";
 import { getAccessToken, getRefreshToken, refreshAccessToken, setTokens } from "./auth";
 
 const api = axios.create({
-  baseURL: "http://localhost:8080/api/v1", 
+  baseURL: "http://localhost:8080/api/v1",
   headers: { "Content-Type": "application/json" },
 });
 
@@ -24,18 +24,28 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
+        console.log("Interceptor: Attempting to refresh token");
         const { accessToken } = await refreshAccessToken(getRefreshToken());
-
-        // Update headers with new token
+        console.log("Interceptor: New access token:", accessToken);
         api.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
         originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
-
-        return api(originalRequest); // retry request
+        return api(originalRequest); // Retry request
       } catch (err) {
-        localStorage.clear(); // logout on failure
+        console.error("Interceptor: Token refresh failed:", {
+          status: err.response?.status,
+          data: err.response?.data,
+          message: err.message,
+        });
+        // Avoid clearing localStorage during debugging
+        // localStorage.clear();
         return Promise.reject(err);
       }
     }
+    console.error("Interceptor: API error:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
     return Promise.reject(error);
   }
 );
